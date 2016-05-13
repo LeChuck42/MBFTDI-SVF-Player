@@ -1046,7 +1046,7 @@ unsigned char* skip_space(unsigned char* ptr)
 	while(1)
 	{
 		unsigned char c = *ptr;
-		if( c==' ' || c==9 ) 
+		if( c==' ' || c==0x09 ) 
 		{
 			ptr++;
 			continue;
@@ -1283,56 +1283,65 @@ int do_SDR(FILE* f)
 		}
 		
 		//analyze words
-		if(strcmp((char*)word,"TDI")==0)
+		if(*word)
 		{
-			has_tdi = 1;
-			pdest = psdr_tdi_data;
-			pdest_count  = &sdr_tdi_sz;
+			if(strcmp((char*)word,"TDI")==0)
+			{
+				has_tdi = 1;
+				pdest = psdr_tdi_data;
+				pdest_count  = &sdr_tdi_sz;
+			}
+			else
+			if(strcmp((char*)word,"TDO")==0)
+			{
+				has_tdo = 1;
+				pdest = psdr_tdo_data;
+				pdest_count  = &sdr_tdo_sz;
+			}
+			else
+			if(strcmp((char*)word,"MASK")==0)
+			{
+				has_mask = 1;
+				pdest = psdr_mask_data;
+				pdest_count  = &sdr_mask_sz;
+			}
+			else
+			if(strcmp((char*)word,"SMASK")==0)
+			{
+				has_smask = 1;
+				pdest = psdr_smask_data;
+				pdest_count  = &sdr_smask_sz;
+			}
+			else
+			if(strcmp((char*)word,";")==0)
+			{
+				//end of string!
+				//send bitstream to jtag
+				sdr_nbits(num_bits,has_tdo,has_mask,has_smask);
+				break;
+			}
+			else
+			{
+				printf("syntax error for SDR command, unknown parameter word\n");
+				return 0;
+			}
+		
+			//parameter should be in parentheses
+			ptr = skip_expected_word(ptr,(unsigned char*)"(",&r);
+			if(r==0)
+			{
+				printf("syntax error for SDR command, expected char ( after TDI word\n");
+				return 0;
+			}
+			//now expect to read hexadecimal array of tdi data
+			ptr = read_hex_array(ptr,pdest,num_bits,f,pdest_count,&r);
 		}
 		else
-		if(strcmp((char*)word,"TDO")==0)
 		{
-			has_tdo = 1;
-			pdest = psdr_tdo_data;
-			pdest_count  = &sdr_tdo_sz;
+			ptr = (unsigned char*) fgets(rbuffer,MAX_STRING_LENGTH-1,f);
+			if (!ptr)
+				break;
 		}
-		else
-		if(strcmp((char*)word,"MASK")==0)
-		{
-			has_mask = 1;
-			pdest = psdr_mask_data;
-			pdest_count  = &sdr_mask_sz;
-		}
-		else
-		if(strcmp((char*)word,"SMASK")==0)
-		{
-			has_smask = 1;
-			pdest = psdr_smask_data;
-			pdest_count  = &sdr_smask_sz;
-		}
-		else
-		if(strcmp((char*)word,";")==0)
-		{
-			//end of string!
-			//send bitstream to jtag
-			sdr_nbits(num_bits,has_tdo,has_mask,has_smask);
-			break;
-		}
-		else
-		{
-			printf("syntax error for SDR command, unknown parameter word\n");
-			return 0;
-		}
-
-		//parameter should be in parentheses
-		ptr = skip_expected_word(ptr,(unsigned char*)"(",&r);
-		if(r==0)
-		{
-			printf("syntax error for SDR command, expected char ( after TDI word\n");
-			return 0;
-		}
-		//now expect to read hexadecimal array of tdi data
-		ptr = read_hex_array(ptr,pdest,num_bits,f,pdest_count,&r);
 	}
 	return 1;
 }

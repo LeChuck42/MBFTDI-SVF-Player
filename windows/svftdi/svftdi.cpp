@@ -32,7 +32,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	if(f==NULL)
 	{
 		printf("Cannot open SVF file %s\n",argv[2]);
-		return -1;
+		return -2;
 	}
 
 	play_svf(f);
